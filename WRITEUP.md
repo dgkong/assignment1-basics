@@ -14,8 +14,11 @@ print("this is a test" + chr(0) + "string") shows nothing between "test" and "st
 
 ### Problem (train_bpe_tinystories): BPE Training on TinyStories
 
+1. ~2m and 304MB memory. Longest vocab: b' accomplishment', b' disappointment', and b' responsibility'.
 
 ### Problem (train_bpe_expts_owt): BPE Training on OpenWebText
 
+1. ~1h 22m and 7GB memory. Longest vocab: b'\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82\xc3\x83\xc3\x82'.
 
 ### Problem (tokenizer_experiments): Experiments with tokenizers
+

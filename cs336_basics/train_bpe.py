@@ -6,9 +6,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 import regex as re
-
-data_dir = Path(__file__).parent.parent / "data"
-TINYSTORIES_VAL = data_dir / "TinyStoriesV2-GPT4-valid.txt"
+from tqdm import tqdm
 
 PAT = re.compile(r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+""")
 
@@ -80,8 +78,9 @@ def process_chunk(
     input_path: str,
     start: int,
     end: int,
-    special_tokens_re: re.Pattern,
-) -> Counter[tuple[bytes]]:
+    special_tokens_re: re.Pattern
+) -> Counter[tuple[bytes, ...]]:
+    
     pretok_freqs = Counter()
     with open(input_path, "rb") as f:
         f.seek(start)
@@ -89,41 +88,40 @@ def process_chunk(
         chunk_docs = special_tokens_re.split(chunk)
         for doc in chunk_docs:
             for match in PAT.finditer(doc):
-                pretok = tuple(bytes([b]) for b in match.group().encode("UTF-8"))
+                pretok = tuple(bytes([b]) for b in match.group().encode("utf-8"))
                 pretok_freqs[pretok] += 1
     return pretok_freqs
 
 def pretokenize(
     input_path: str,
     special_tokens: list[str],
-    num_processes: int = mp.cpu_count()
+    num_processes: int
 ) -> tuple[dict[tuple[bytes, ...], int], dict[int, tuple[bytes, ...]], dict[tuple[bytes, ...], int]]:
+    
     pretok_freqs = Counter()
     special_tokens_re = re.compile("|".join(list(map(re.escape, special_tokens))))
     print(f"Running pre-tokenization with {num_processes} processes...")
     if num_processes == 1:
         with open(input_path, "rb") as f:
-            boundaries = find_chunk_boundaries(f, num_processes, "<|endoftext|>".encode("utf-8"))
-            for start, end in zip(boundaries[:-1], boundaries[1:]):
-                f.seek(start)
-                chunk = f.read(end - start).decode("utf-8", errors="ignore")
-                chunk_docs = special_tokens_re.split(chunk)
-                for doc in chunk_docs:
-                    for match in PAT.finditer(doc):
-                        pretok = tuple(bytes([b]) for b in match.group().encode("UTF-8"))
-                        pretok_freqs[pretok] += 1
+            start, end = find_chunk_boundaries(f, num_processes, "<|endoftext|>".encode("utf-8"))
+            f.seek(start)
+            chunk = f.read(end - start).decode("utf-8", errors="ignore")
+            chunk_docs = special_tokens_re.split(chunk)
+            for doc in tqdm(chunk_docs, total=len(chunk_docs), desc="Docs", unit="doc"):
+                for match in PAT.finditer(doc):
+                    pretok = tuple(bytes([b]) for b in match.group().encode("utf-8"))
+                    pretok_freqs[pretok] += 1
     else:
         with open(input_path, "rb") as f:
-            boundaries = find_chunk_boundaries(f, num_processes, "<|endoftext|>".encode("utf-8"))
+            boundaries = find_chunk_boundaries(f, 8*num_processes, "<|endoftext|>".encode("utf-8"))
         worker_args = []
         for start, end in zip(boundaries[:-1], boundaries[1:]):
             worker_args.append((input_path, start, end, special_tokens_re))
-
         with mp.Pool(processes=num_processes) as pool:
             freq_counters = pool.starmap(process_chunk, worker_args)
         for counter in freq_counters:
             pretok_freqs.update(counter)
-
+    print(f"Finished pre-tokenization!")
     pretok_to_index = {}
     index_to_pretok = {}
     for i, pretok in enumerate(pretok_freqs.keys()):
@@ -136,8 +134,9 @@ def get_bp_freqs(
     pretok_freqs: dict[tuple[bytes, ...], int],
     pretok_to_index: dict[tuple[bytes, ...], int]
 ) -> tuple[dict[tuple[bytes, bytes], int], dict[tuple[bytes, bytes], set[int]]]:
+    
     bp_freqs, bp_pretok_map = defaultdict(int), defaultdict(set)
-
+    print(f"Counting byte-pair frequencies...")
     for pretok, freq in pretok_freqs.items():
         if len(pretok) == 1:
             continue
@@ -203,11 +202,13 @@ def update_merged_bp(
 def train_bpe(
     input_path: str, 
     vocab_size: int, 
-    special_tokens: list[str]
+    special_tokens: list[str],
+    num_processes: int = max(mp.cpu_count()-1, 1)
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
-    pretok_freqs, pretok_to_index, index_to_pretok = pretokenize(input_path, special_tokens)
+    pretok_freqs, pretok_to_index, index_to_pretok = pretokenize(input_path, special_tokens, num_processes)
     bp_freqs, bp_pretok_map = get_bp_freqs(pretok_freqs, pretok_to_index)
 
+    print(f"Merging byte-pair encodings...")
     vocab = {i: bytes([i]) for i in range(256)}
     for st in special_tokens:
         vocab[len(vocab)] = st.encode("utf-8")
@@ -215,6 +216,8 @@ def train_bpe(
     bp_heap = [BPHeapItem(bp, freq) for bp, freq in bp_freqs.items()]
     heapq.heapify(bp_heap)
 
+    target_merges = vocab_size - len(vocab)
+    pbar = tqdm(total=target_merges, desc="BPE merges", unit="merge")
     while len(vocab) < vocab_size:
         if not bp_heap:
             break
@@ -227,16 +230,42 @@ def train_bpe(
         
         vocab[len(vocab)] = b''.join(bp_to_merge)
         merges.append(bp_to_merge)
-
+        pbar.update()
+    pbar.close()
     return vocab, merges
 
-import pathlib
+def save_bpe(
+    vocab: dict[int, bytes],
+    merges: list[tuple[bytes, bytes]],
+    output_name: str
+):
+    print(f"Saving BPE vocab and merges...")
+    with open('./models/' + output_name + '_vocab.txt', 'w', encoding='utf-8') as f:
+        for index, token_bytes in vocab.items():
+            f.write(f"{index}\t{repr(token_bytes)}\n")
 
-FIXTURES_PATH = (pathlib.Path(__file__).resolve().parent.parent) / "tests" / "fixtures"
+    with open('./models/' + output_name + '_merges.txt', 'w', encoding='utf-8') as f:
+        for token_a, token_b in merges:
+            f.write(f"{repr(token_a)}\t{repr(token_b)}\n")
 
-input_path = FIXTURES_PATH / "corpus.en"
-vocab, merges = train_bpe(
-    input_path=input_path,
-    vocab_size=500,
-    special_tokens=["<|endoftext|>"],
-)
+if __name__ == '__main__':
+    DATA_PATH = (Path(__file__).resolve().parent.parent) / "data"
+
+    # TinyStories
+    input_path = DATA_PATH / "TinyStoriesV2-GPT4-train.txt"
+    vocab, merges = train_bpe(
+        input_path=input_path,
+        vocab_size=10000,
+        special_tokens=["<|endoftext|>"]
+    )
+    # save_bpe(vocab, merges, 'ts')
+
+    # OpenWebText
+    # input_path = DATA_PATH / "owt_train.txt"
+    # vocab, merges = train_bpe(
+    #     input_path=input_path,
+    #     vocab_size=32000,
+    #     special_tokens=["<|endoftext|>"]
+    # )
+    # save_bpe(vocab, merges, 'owt')
+    
