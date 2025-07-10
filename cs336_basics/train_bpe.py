@@ -240,15 +240,15 @@ def save_bpe(
     output_name: str
 ):
     print(f"Saving BPE vocab and merges...")
-    with open('./models/' + output_name + '_vocab.txt', 'w', encoding='utf-8') as f:
+    with open("./models/" + output_name + "_vocab.txt", "w", encoding="utf-8") as f:
         for index, token_bytes in vocab.items():
             f.write(f"{index}\t{repr(token_bytes)}\n")
 
-    with open('./models/' + output_name + '_merges.txt', 'w', encoding='utf-8') as f:
+    with open("./models/" + output_name + "_merges.txt", "w", encoding="utf-8") as f:
         for token_a, token_b in merges:
             f.write(f"{repr(token_a)}\t{repr(token_b)}\n")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     DATA_PATH = (Path(__file__).resolve().parent.parent) / "data"
 
     # TinyStories
@@ -258,7 +258,7 @@ if __name__ == '__main__':
         vocab_size=10000,
         special_tokens=["<|endoftext|>"]
     )
-    # save_bpe(vocab, merges, 'ts')
+    # save_bpe(vocab, merges, "ts")
 
     # OpenWebText
     # input_path = DATA_PATH / "owt_train.txt"
@@ -267,5 +267,5 @@ if __name__ == '__main__':
     #     vocab_size=32000,
     #     special_tokens=["<|endoftext|>"]
     # )
-    # save_bpe(vocab, merges, 'owt')
+    # save_bpe(vocab, merges, "owt")
     
