@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 
 class Tokenizer:
-    def __init__(self, vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], special_tokens: list[str]=None):
+    def __init__(self, vocab: dict[int, bytes], merges: list[tuple[bytes, bytes]], special_tokens: list[str]|None = None):
         self.id_to_token = vocab
         self.merge_ranks = {merge: i for i, merge in enumerate(merges)}
         self.token_to_id = {v: k for k, v in vocab.items()}
@@ -31,7 +31,7 @@ class Tokenizer:
                     self.id_to_token[ind] = tok
 
     @classmethod
-    def from_files(cls, vocab_filepath: str, merges_filepath: str, special_tokens: list[str]=None):
+    def from_files(cls, vocab_filepath: str, merges_filepath: str, special_tokens: list[str]|None = None):
         vocab = {}
         with open(vocab_filepath, "r", encoding="utf-8") as vf:
             for line in vf:

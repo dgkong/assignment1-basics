@@ -22,3 +22,7 @@ print("this is a test" + chr(0) + "string") shows nothing between "test" and "st
 
 ### Problem (tokenizer_experiments): Experiments with tokenizers
 
+1. ts average compression ratio: 4.0883; owt average compression ratio: 4.4843.
+2. owt average compression ratio: 3.1924.
+3. throughput: 6.0286 MB per second tokenizing TinyStories-valid. If we extrapolate this throughput, we'd tokenize the Pile dataset in ~38 hours.
+4. uint16 is fitting especially since our token ids don't require negative values. 16 bits fits from 0~65535 which is sufficient for our vocab size as well for owt and ts.
