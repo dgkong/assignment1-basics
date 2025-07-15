@@ -12,11 +12,12 @@ from torch import Tensor
 from cs336_basics.modules import (Block, Embedding, Linear,
                                   MultiHeadSelfAttention, RMSNorm,
                                   RotaryPositionalEmbedding, SwiGLU,
-                                  TransformerLM, scaled_dot_product_attention,
-                                  softmax)
+                                  TransformerLM, scaled_dot_product_attention)
+from cs336_basics.optimizer import AdamW
 from cs336_basics.tokenizer import Tokenizer
 from cs336_basics.train_bpe import train_bpe
-from cs336_basics.trainer import AdamW, cross_entropy_loss
+from cs336_basics.utils import (cross_entropy_loss, get_lr_cos_schedule,
+                                gradient_clip, silu_activation, softmax)
 
 
 def run_linear(
@@ -424,7 +425,7 @@ def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
         Float[Tensor,"..."]: of with the same shape as `in_features` with the output of applying
         SiLU to each element.
     """
-    raise NotImplementedError
+    return silu_activation(in_features)
 
 
 def run_get_batch(
@@ -491,7 +492,7 @@ def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm:
 
     The gradients of the parameters (parameter.grad) should be modified in-place.
     """
-    raise NotImplementedError
+    return gradient_clip(parameters, max_l2_norm)
 
 
 def get_adamw_cls() -> type[torch.optim.Optimizer]:
@@ -526,7 +527,7 @@ def run_get_lr_cosine_schedule(
     Returns:
         Learning rate at the given iteration under the specified schedule.
     """
-    raise NotImplementedError
+    return get_lr_cos_schedule(it, max_learning_rate, min_learning_rate, warmup_iters, cosine_cycle_iters)
 
 
 def run_save_checkpoint(

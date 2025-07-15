@@ -6,14 +6,8 @@ from einops import einsum, rearrange, reduce
 from jaxtyping import Bool, Float, Int
 from torch import Tensor
 
+from cs336_basics.utils import silu_activation, softmax
 
-def silu_activation(x: Tensor) -> Tensor:
-    return x * torch.sigmoid(x)
-
-def softmax(x: Float[Tensor, " ..."], dim: int) -> Float[Tensor, " ..."]:
-    x = x - x.max(dim=dim, keepdim=True).values
-    x_exp = x.exp()
-    return x_exp / x_exp.sum(dim=dim, keepdim=True)
 
 def scaled_dot_product_attention(
         q: Float[Tensor, "batch_size ... seq_len d_k"], 

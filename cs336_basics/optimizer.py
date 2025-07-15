@@ -1,34 +1,8 @@
 import math
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from typing import Optional
 
 import torch
-from einops import rearrange
-from jaxtyping import Float, Int
-from torch import Tensor
-
-
-def cross_entropy_loss(
-        logits: Float[Tensor, "batch_size ... vocab_size"], 
-        targets: Int[Tensor, "batch_size ..."]
-    ) -> Float:
-    targets = rearrange(targets, "b ... -> (b ...)")
-    logits = rearrange(logits, "b ... d -> (b ...) d")
-    logits = logits - logits.max(dim=-1, keepdim=True).values
-    logsumexp = torch.logsumexp(logits, dim=-1)
-    nll = -logits[torch.arange(logits.shape[0]), targets]
-    loss = nll + logsumexp
-    return loss.mean()
-
-def perplexity(
-        logits: Float[Tensor, "seq_len vocab_size"],
-        targets: Int[Tensor, "seq_len"]
-) -> Float:
-    logits = logits - logits.max(dim=-1, keepdim=True).values
-    logsumexp = torch.logsumexp(logits, dim=-1)
-    nll = -logits[torch.arange(logits.shape[0]), targets]
-    loss = nll + logsumexp
-    return loss.mean().exp()
 
 
 class SGD(torch.optim.Optimizer):

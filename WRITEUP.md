@@ -51,7 +51,45 @@ print("this is a test" + chr(0) + "string") shows nothing between "test" and "st
 - For this SGD example, lr of 1e1 brings loss from 20's to ~3, lr of 1e2 brings loss down to ~3e-23, and lr of 1e3 diverges.
 
 ### Problem (adamwAccounting): Resource accounting for training with AdamW
+1.  batch_size (vocab_size, context_length, num_layers, d_model, num_heads) d_ff = 4 * d_model
 
+    Parameters:
+
+        - Transformer block: num_layers
+            - RMSNorms: 2 * d_model
+            - MultiheadSelfAttention: 4 * d_model * d_model
+            - FFN: 2 * d_model * 4 * d_model
+        - final RMSNorm: d_model
+        - output embedding: d_model * vocab_size
+
+    Optimizer state: 
+
+        - m, v -> 2 * Parameters 
+
+    Gradients: 
+    
+        - 1 * Parameters
+
+    Activations:
+
+        - Transformer block: num_layers
+            - RMSNorms: 2 * batch_size * context_length * d_model
+            - MultiheadSelfAttention:
+                - QKV proj: 3 * batch_size * context_length * d_model
+                - QK matmul: batch_size * num_heads * context_length * context_length
+                - softmax: batch_size * num_heads * context_length * context_length
+                - weighted sum of values: batch_size * num_heads * context_length * d_model
+                - output projection: batch_size * context_length * d_model
+            - FFN:
+                - W1: batch_size * context_length * 4 * d_model
+                - SiLU: batch_size * context_length * 4 * d_model
+                - W2: batch_size * context_length * d_model
+        - final RMSNorm: batch_size * context_length * d_model
+        - output embedding: batch_size * context_length * vocab_size
+        - cross entropy: batch_size * context_length
+2. skip
+3. Total Flops: ~6 * Parameters * Tokens (forward: 2 * P * T, backward: gradient wrt Parameters: 2 * P * T, gradient wrt Activations: 2 * P * T)
+4. skip
 
 ### Problem (learning_rate): Tune the learning rate
 
