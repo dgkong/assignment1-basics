@@ -26,3 +26,45 @@ print("this is a test" + chr(0) + "string") shows nothing between "test" and "st
 2. owt average compression ratio: 3.1924.
 3. throughput: 6.0286 MB per second tokenizing TinyStories-valid. If we extrapolate this throughput, we'd tokenize the Pile dataset in ~38 hours.
 4. uint16 is fitting especially since our token ids don't require negative values. 16 bits fits from 0~65535 which is sufficient for our vocab size as well for owt and ts.
+
+### Problem (transformer_accounting): Transformer LM resource accounting
+
+1. 2,127,057,600 trainable parameters. 8,508,230,400 bytes ~ 7.9 GB.
+2. Matmuls: 4,513,336,524,800 FLOPS
+
+    num_layers x MultiHeadSelfAttention: ~27 billion
+    - q_proj(x), k_proj(x), v_proj(x): (d_model, d_model) (d_model, context_length)
+    - qk (context_length, d_model) (d_model, context_length)
+    - qkv (context_length, context_length) (context_length, d_model)
+    - output (d_model, d_model) (context_length, d_model)
+
+    num_layers x SwiGLU: ~62 billion
+    - w1(x), w3(x): (d_model, d_ff) (context_length, d_model)
+    - w2(x): (d_ff, d_model) (context_length, d_ff)
+
+    lm_head(x): (d_model, vocab_size) (context_length, d_model)
+3. The MultiHeadSelfAttention, especially the FFN, takes the majority of the FLOPS.
+4. skip
+5. If context length is 16,384, FLOPs from SwiGLU should increase proportionally, but the qk and qkv matrix multiplication FLOPs would increase quadratically.
+
+### Problem (learning_rate_tuning): Tuning the learning rate
+- For this SGD example, lr of 1e1 brings loss from 20's to ~3, lr of 1e2 brings loss down to ~3e-23, and lr of 1e3 diverges.
+
+### Problem (adamwAccounting): Resource accounting for training with AdamW
+
+
+### Problem (learning_rate): Tune the learning rate
+
+### Problem (batch_size_experiment): Batch size variations
+
+### Problem (generate): Generate text
+
+### Problem (layer_norm_ablation): Remove RMSNorm and train
+
+### Problem (pre_norm_ablation): Implement post-norm and train
+
+### Problem (no_pos_emb): Implement NoPE
+
+### Problem (swiglu_ablation): SwiGLU vs. SiLU
+
+### Problem (main_experiment): Experiment on TinyStories
