@@ -180,7 +180,7 @@ class MultiHeadSelfAttention(nn.Module):
             k = self.rope(k, token_positions)
 
         if mask is None:
-            mask = torch.tril(torch.ones(seq_len, seq_len, dtype=torch.bool)) # causal mask
+            mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool)) # causal mask
 
         attn = scaled_dot_product_attention(q, k, v, mask)
         attn = rearrange(attn, " ... h t d -> ... t (h d)", h=self.num_heads)
