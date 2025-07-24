@@ -92,10 +92,20 @@ print("this is a test" + chr(0) + "string") shows nothing between "test" and "st
 4. skip
 
 ### Problem (learning_rate): Tune the learning rate
+1. For batch size 8, surprisingly divergence occurred at a high max learning rate of 2e-1 where we can clearly see signs of loss increasing rather than getting stuck at a high plateau. The best max learning rate was around 8e-4.
+2. It may be because I'm training the downscaled version (way less tokens seen and optimizer steps), but the learning rate way under the edge of stability was best for bringing down losses. Perhaps the higher learning rate training runs would've converged to a lower loss if trained for more steps.
+
+For the sake of time, will be skipping experiments/ablations due to length of training runs even on downscaled configs (~1 hour 20 minutes). 
 
 ### Problem (batch_size_experiment): Batch size variations
+1. Micro-batch size of 8 gave fastest tokens per second on my device. Batch size 32 gives lower losses than batch size 8.
 
 ### Problem (generate): Generate text
+1. Input prompt: "Once"
+
+    Once upon a time, there was a little boy named Tim. Tim loved to play with his toy cars. One day, he saw a new car in his room. It was red and shiny. Tim wanted to play with it, but he was scared.
+    Tim's mom saw him and said, "Don't be scared, Tim. It's just a little scared. It's just a car." Tim felt better and they played together. They had fun and learned to be brave.
+    The next day, Tim's mom said, "Tim, you need to be brave and find a way to play with the car." Tim was happy and promised to be brave. They played together and had a lot of fun.
 
 ### Problem (layer_norm_ablation): Remove RMSNorm and train
 
@@ -104,5 +114,3 @@ print("this is a test" + chr(0) + "string") shows nothing between "test" and "st
 ### Problem (no_pos_emb): Implement NoPE
 
 ### Problem (swiglu_ablation): SwiGLU vs. SiLU
-
-### Problem (main_experiment): Experiment on TinyStories

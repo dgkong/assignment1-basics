@@ -2,8 +2,6 @@ import json
 from pathlib import Path
 
 import torch
-from jaxtyping import Int
-from torch import Tensor
 
 from cs336_basics.modules import TransformerLM
 from cs336_basics.tokenizer import Tokenizer
@@ -19,14 +17,31 @@ def decode(
         temperature: float, 
         top_p: float
 ) -> str:
-    device = next(model.parameters()).device
+    device = model.device
+    context_len = model.context_length
+    eot_id = tokenizer.encode("<|endoftext|>")[0]
     prompt = tokenizer.encode(prompt)
     while len(prompt) < max_length:
         with torch.no_grad():
-            logits = model(torch.tensor(prompt, device=device)) # (seq_len, vocab_size)
-            next_tok_probs = softmax(logits[-1, :], dim=-1)
-            next_tok_id = torch.argmax(next_tok_probs)
-            prompt.append(next_tok_id.item())
+            if len(prompt) > context_len:
+                prompt = prompt[-context_len:]
+            input_ids = torch.tensor(prompt, device=device).unsqueeze(0)  # (1, seq_len)
+            logits = model(input_ids)  # (1, seq_len, vocab_size)
+            next_tok_probs = softmax(logits[0, -1, :] / temperature, dim=-1) # (vocab_size,)
+            sorted_probs, sorted_indices = torch.sort(next_tok_probs, descending=True)
+            cum_probs = torch.cumsum(sorted_probs, dim=0)
+            top_p_mask = cum_probs <= top_p
+            last_included = top_p_mask.sum().item()
+            top_p_mask[:last_included+1] = True # always at least 1 tok
+
+            top_probs = sorted_probs[top_p_mask]
+            top_indices = sorted_indices[top_p_mask]
+            next_token_id = top_indices[torch.multinomial(top_probs, 1).item()].item()
+            if next_token_id == eot_id:
+                print("Ended generation because of <|eot|>.")
+                break
+            prompt.append(next_token_id)
+
     return tokenizer.decode(prompt)
 
 def main():
@@ -49,10 +64,12 @@ def main():
 
     model = TransformerLM(**config['model'], device=device, dtype=dtype)
     model.to(device)
+    model = torch.compile(model, backend="aot_eager")
 
-    CHECKPOINT = (Path(__file__).resolve().parent) / "checkpoints"
-    # load_checkpoint(CHECKPOINT, model)
-    print(decode(model, tokenizer, "The apple", max_length=32, temperature=0.7, top_p=0.9))
+    # print(decode(model, tokenizer, "Once", max_length=32, temperature=0.7, top_p=0.9))
+    BEST_CHECKPOINT = (Path(__file__).resolve().parent) / "out" / "checkpoints" / "lr_tune" / "batch_size_32" / "0.0009_final_model.pt"
+    load_checkpoint(BEST_CHECKPOINT, model)
+    print(decode(model, tokenizer, "Once", max_length=256, temperature=0.7, top_p=0.9))
 
 if __name__ == "__main__":
     main()

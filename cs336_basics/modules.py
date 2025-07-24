@@ -224,6 +224,9 @@ class TransformerLM(nn.Module):
             dtype: torch.dtype|None = None
     ):
         super().__init__()
+        self.context_length = context_length
+        self.device = device
+
         self.token_embeddings = Embedding(vocab_size, d_model, device, dtype)
         self.layers = nn.ModuleList([
             Block(d_model, num_heads, d_ff, context_length, rope_theta, device, dtype)

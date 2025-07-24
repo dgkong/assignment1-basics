@@ -166,7 +166,7 @@ def tokenize_data(data_path, tokenizer, save_file=None):
 
 if __name__ == "__main__":
     DATA_PATH = (Path(__file__).resolve().parent.parent) / "data"
-    BPE_PATH = (Path(__file__).resolve().parent) / "models"
+    BPE_PATH = (Path(__file__).resolve().parent) / "bpe_models"
     TS_TRAIN = DATA_PATH / "TinyStoriesV2-GPT4-train.txt"
     TS_VAL = DATA_PATH / "TinyStoriesV2-GPT4-valid.txt"
     OWT_TRAIN = DATA_PATH / "owt_train.txt"
@@ -184,4 +184,4 @@ if __name__ == "__main__":
     # tokenize_data(TS_TRAIN, ts_tokenizer, DATA_PATH / "ts_train_tokenized.npy")
 
     # tokenize_data(OWT_VAL, owt_tokenizer)
-    tokenize_data(OWT_TRAIN, owt_tokenizer, DATA_PATH / "owt_train_tokenized.npy")
+    # tokenize_data(OWT_TRAIN, owt_tokenizer, DATA_PATH / "owt_train_tokenized.npy")

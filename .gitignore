@@ -2,6 +2,7 @@
 data/
 *profile.html
 *profile.json
+cs336_basics/out/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

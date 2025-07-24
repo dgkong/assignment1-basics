@@ -240,11 +240,11 @@ def save_bpe(
     output_name: str
 ):
     print(f"Saving BPE vocab and merges...")
-    with open("./models/" + output_name + "_vocab.txt", "w", encoding="utf-8") as f:
+    with open("./bpe_models/" + output_name + "_vocab.txt", "w", encoding="utf-8") as f:
         for index, token_bytes in vocab.items():
             f.write(f"{index}\t{repr(token_bytes)}\n")
 
-    with open("./models/" + output_name + "_merges.txt", "w", encoding="utf-8") as f:
+    with open("./bpe_models/" + output_name + "_merges.txt", "w", encoding="utf-8") as f:
         for token_a, token_b in merges:
             f.write(f"{repr(token_a)}\t{repr(token_b)}\n")
 
